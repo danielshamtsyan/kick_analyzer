@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kick Analyzer — Results</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #1a1a1a; }
+        h1 { font-size: 22px; margin-bottom: 4px; }
+        a.back { font-size: 14px; color: #666; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-top: 20px; }
+        .card h2 { font-size: 16px; margin-top: 0; }
+        .feedback-item { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+        .feedback-item:last-child { border-bottom: none; }
+        .status-ok { color: #1a7a1a; }
+        .status-low, .status-high { color: #b8860b; }
+        .status-unmeasured { color: #888; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-right: 8px; }
+        .badge-ok { background: #e6f4e6; color: #1a7a1a; }
+        .badge-warn { background: #fdf3d8; color: #8a6d00; }
+        .badge-unmeasured { background: #eee; color: #666; }
+        video { width: 100%; border-radius: 6px; margin-top: 12px; background: #000; }
+        .confidence-value { font-size: 28px; font-weight: 700; }
+        .confidence-note { font-size: 13px; color: #666; margin-top: 4px; }
+        .links a { font-size: 13px; margin-right: 16px; }
+        .empty-state { color: #900; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <a class="back" href="/">&larr; Analyze another clip</a>
+    <h1>Results</h1>
+    <p style="color:#666; font-size:14px;">{{ result.frame_count }} frames analyzed at {{ "%.0f"|format(result.fps) }} fps · {{ side }} leg kick</p>
+
+    {% if result.peak_idx is none %}
+    <div class="card">
+        <p class="empty-state">
+            Couldn't find a reliable peak-kick frame in this clip — tracking was
+            too unreliable throughout. This is almost always a Track 2 issue
+            (motion blur / frame rate), not a technique problem. Try re-filming
+            in slo-mo, with the full body in frame and a side-on angle.
+        </p>
+    </div>
+    {% else %}
+
+    <div class="card">
+        <h2>Tracking reliability</h2>
+        <div class="confidence-value">{{ "%.0f"|format(result.confidence_pct) }}%</div>
+        <div class="confidence-note">
+            {% if result.confidence_pct >= 80 %}
+                Reliable — this footage quality is usable.
+            {% elif result.confidence_pct >= 50 %}
+                Marginal — some frames near the kick were unreliable. Feedback below may be less precise than usual.
+            {% else %}
+                Unreliable — motion blur likely too severe at this frame rate. Try slo-mo capture (120fps+).
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Coaching feedback (peak frame {{ result.peak_idx }})</h2>
+        {% for label, status, message in result.feedback %}
+        <div class="feedback-item">
+            <span class="badge badge-{{ 'ok' if status == 'ok' else ('unmeasured' if status == 'unmeasured' else 'warn') }}">
+                {{ label }}
+            </span>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <h2>Annotated video</h2>
+        <video controls>
+            <source src="{{ url_for('serve_result_file', session_id=session_id, filename='annotated.mp4') }}" type="video/mp4">
+        </video>
+        <div class="links" style="margin-top:12px;">
+            <a href="{{ url_for('serve_result_file', session_id=session_id, filename='confidence_report.csv') }}">Download confidence CSV</a>
+        </div>
+    </div>
+
+    {% endif %}
+</body>
+</html>
